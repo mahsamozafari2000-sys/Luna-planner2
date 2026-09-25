@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>پلنر لونا</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#F3F5FA; --card:#FFFFFF; --card-alt:#EEF1F8; --ink:#1F2430; --ink-muted:#6B7280;
+    --border:#E4E8F0; --primary:#3B6FE0; --primary-soft:#EAF0FD; --danger:#E5484D; --good:#00B894;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 2px 6px rgba(16,24,40,.06);
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Vazirmatn',sans-serif; -webkit-font-smoothing:antialiased;}
+  input,select,textarea,button{font-family:inherit; color:inherit;}
+  button{cursor:pointer; background:none; border:none;}
+  .app{max-width:780px; margin:0 auto; min-height:100vh; padding-bottom:40px;}
+  .app-header{background:var(--card); padding:18px 16px 10px; box-shadow:var(--shadow);}
+  .app-title{font-size:1.4rem; font-weight:800;}
+  .app-subtitle{color:var(--ink-muted); font-size:.83rem; margin-top:2px;}
+  .tabbar{background:var(--card); position:sticky; top:0; z-index:20; overflow-x:auto; white-space:nowrap; box-shadow:var(--shadow);}
+  .tabbar-inner{display:flex; gap:2px; padding:4px 6px;}
+  .tab-btn{display:flex; align-items:center; gap:5px; padding:10px 12px; font-size:.83rem; font-weight:500; color:var(--ink-muted); border-radius:10px; flex-shrink:0; transition:background .15s,color .15s;}
+  .tab-btn.active{color:#fff; font-weight:700; background:var(--primary);}
+  .tab-btn:not(.active):hover{background:var(--card-alt);}
+  .content{padding:16px;}
+  .card{background:var(--card); border-radius:var(--radius); padding:13px; box-shadow:var(--shadow);}
+  .mb2{margin-bottom:8px;} .mb3{margin-bottom:12px;} .mb4{margin-bottom:16px;} .mb5{margin-bottom:22px;} .mt2{margin-top:8px;} .mt3{margin-top:12px;}
+  .row{display:flex; align-items:center; gap:8px;} .row-wrap{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .col{display:flex; flex-direction:column; gap:10px;}
+  .between{display:flex; align-items:center; justify-content:space-between;}
+  .muted{color:var(--ink-muted);}
+  .grow{flex:1; min-width:0;}
+  .input{border:1px solid var(--border); border-radius:10px; padding:7px 11px; font-size:.85rem; background:var(--card); outline:none;}
+  .input:focus{border-color:var(--primary);}
+  .input-plain{border:none; outline:none; background:transparent; font-family:inherit; width:100%;}
+  .btn{display:flex; align-items:center; gap:4px; border-radius:10px; padding:8px 14px; font-size:.82rem; font-weight:600;}
+  .btn-primary{background:var(--primary); color:#fff; box-shadow:0 2px 6px rgba(59,111,224,.35);}
+  .btn-outline{border:1px solid var(--border); color:var(--ink-muted); background:var(--card);}
+  .btn-danger{color:var(--danger);}
+  .btn-icon{padding:6px; color:var(--ink-muted); border-radius:8px;}
+  .btn-icon:hover{background:var(--card-alt);}
+  .empty{text-align:center; color:var(--ink-muted); font-size:.85rem; padding:20px 0;}
+  .flag-btn{padding:3px; border-radius:6px; opacity:.32;}
+  .flag-btn.sel{opacity:1;}
+  .type-btn{padding:6px; border-radius:9px; color:var(--ink-muted);}
+  .type-btn.sel{background:var(--primary-soft); color:var(--primary);}
+  .cat-dot{width:9px; height:9px; border-radius:999px; flex-shrink:0;}
+  .task-row{display:flex; align-items:center; gap:10px; background:var(--card); border-radius:13px; padding:11px 13px; box-shadow:var(--shadow);}
+  .task-check{width:21px; height:21px; border-radius:999px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff;}
+  .task-check.done{background:var(--primary); border-color:var(--primary);}
+  .task-title{font-size:.9rem;} .task-title.done{text-decoration:line-through; color:var(--ink-muted);}
+  .task-meta{display:flex; align-items:center; gap:9px; font-size:.72rem; color:var(--ink-muted); margin-top:3px; flex-wrap:wrap;}
+  .progress-outer{height:6px; background:var(--card-alt); border-radius:999px; overflow:hidden;}
+  .progress-inner{height:100%; background:var(--primary); transition:width .3s;}
+  .day-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .day-nav-center{text-align:center;}
+  .day-nav-title{font-weight:700; font-size:1.05rem;}
+  .week-day-card{background:var(--card); border-radius:13px; padding:11px 13px; cursor:pointer; box-shadow:var(--shadow);}
+  .week-day-card.today{background:var(--primary-soft); box-shadow:inset 0 0 0 1.5px var(--primary);}
+  .month-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .month-label{font-weight:700; font-size:1rem;}
+  .month-grid-headers{display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:.7rem; color:var(--ink-muted); margin-bottom:6px;}
+  .month-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+  .month-cell{aspect-ratio:1; border-radius:10px; background:var(--card); display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:.78rem; cursor:pointer; gap:3px; box-shadow:var(--shadow);}
+  .month-cell.empty{box-shadow:none; background:transparent; cursor:default;}
+  .month-num{width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:999px;}
+  .month-num.today-circle{background:var(--primary); color:#fff; font-weight:700;}
+  .month-dot{width:5px; height:5px; border-radius:999px;}
+  .schedule-wrap{overflow-x:auto;}
+  .schedule-table{border-collapse:separate; border-spacing:4px; width:100%; min-width:640px;}
+  .schedule-table th, .schedule-table td{background:var(--card); border-radius:8px; padding:4px; text-align:center; vertical-align:middle; box-shadow:var(--shadow);}
+  .schedule-table th{background:var(--card-alt); font-size:.75rem;}
+  .schedule-table td input, .schedule-table th input{width:100%; border:none; background:transparent; text-align:center; font-size:.75rem; outline:none; font-family:inherit;}
+  .schedule-table .corner{width:90px;}
+  .col-head{display:flex; flex-direction:column; align-items:center; gap:2px;}
+  .phase-card{background:var(--card); border-radius:var(--radius); padding:13px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
+  .phase-order{width:24px; height:24px; border-radius:999px; background:var(--card-alt); display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; flex-shrink:0;}
+  .status-btn{font-size:.72rem; padding:4px 10px; border-radius:999px; font-weight:600; color:var(--ink-muted); background:var(--card-alt);}
+  .status-btn.active{color:#fff;}
+  input[type=range]{width:100%; accent-color:var(--primary);}
+  .goal-card{background:var(--card); border-radius:var(--radius); padding:13px; box-shadow:var(--shadow);}
+  .subtask-row{display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px solid var(--border); font-size:.82rem;}
+  .subtask-row:first-of-type{border-top:none;}
+  .subtask-check{width:17px; height:17px; border-radius:5px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff;}
+  .subtask-check.done{background:var(--primary); border-color:var(--primary);}
+  .habit-day-btn{width:32px; height:32px; border-radius:9px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:.62rem; flex-direction:column; background:var(--card); color:var(--ink-muted);}
+  .habit-day-btn.done{background:var(--primary); color:#fff; border-color:var(--primary);}
+  .color-swatch{width:28px; height:28px; border-radius:9px; border:1px solid var(--border); padding:0; overflow:hidden; flex-shrink:0;}
+  .color-swatch input{width:150%; height:150%; margin:-25%; border:none; cursor:pointer;}
+  .bar-chart{display:flex; gap:6px; align-items:flex-end; height:140px;}
+  .bar-chart-col{flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; gap:4px;}
+  .bar-chart-track{width:100%; max-width:26px; flex:1; background:var(--card-alt); border-radius:6px; display:flex; flex-direction:column; justify-content:flex-end; overflow:hidden;}
+  .bar-chart-fill{width:100%; border-radius:6px; background:var(--primary);}
+  .bar-chart-label{font-size:.65rem; color:var(--ink-muted);}
+  .bar-single{background:var(--card); border-radius:12px; padding:9px 13px; box-shadow:var(--shadow);}
+  .sticky-note{background:#FFF7E0; border-radius:12px; padding:11px 13px; font-size:.78rem; color:#7A5F16; line-height:1.8;}
+  textarea.input{width:100%; min-height:80px; resize:vertical; font-family:inherit;}
+  .settings-tab-row{display:flex; align-items:center; gap:8px; background:var(--card-alt); border-radius:10px; padding:8px 10px; font-size:.85rem;}
+  .vis-toggle{font-size:.72rem; font-weight:600; padding:4px 10px; border-radius:999px;}
+  .vis-toggle.on{background:var(--primary-soft); color:var(--primary);}
+  .vis-toggle.off{background:var(--border); color:var(--ink-muted);}
+  .list-tab-emoji{font-size:15px; line-height:1;}
+  .pill{font-size:.78rem; padding:6px 13px; border-radius:999px; background:var(--card-alt); color:var(--ink-muted); font-weight:600;}
+  .pill.active{background:var(--primary); color:#fff;}
+  .fin-summary-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .fin-summary-card{background:var(--card); border-radius:14px; padding:13px; box-shadow:var(--shadow);}
+  .fin-summary-num{font-size:1.1rem; font-weight:800; margin-top:4px;}
+  .money-in{color:var(--good);} .money-out{color:var(--danger);}
+  .toggle2{display:flex; background:var(--card-alt); border-radius:10px; padding:3px;}
+  .toggle2 button{flex:1; text-align:center; padding:7px; border-radius:8px; font-size:.82rem; font-weight:600; color:var(--ink-muted);}
+  .toggle2 button.active.income{background:var(--good); color:#fff;}
+  .toggle2 button.active.expense{background:var(--danger); color:#fff;}
+  .txn-row{display:flex; align-items:center; gap:10px; background:var(--card); border-radius:12px; padding:10px 12px; box-shadow:var(--shadow);}
+
+  .center-screen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;}
+  .auth-card{max-width:360px; width:100%; background:var(--card); border-radius:20px; padding:26px 22px; box-shadow:var(--shadow);}
+  .setup-card{max-width:600px; width:100%; background:var(--card); border-radius:20px; padding:26px 22px; box-shadow:var(--shadow); line-height:2;}
+  .setup-card code, .code-block{background:var(--card-alt); border-radius:8px; padding:2px 6px; font-family:monospace; direction:ltr; display:inline-block;}
+  .code-block{display:block; padding:12px; white-space:pre-wrap; word-break:break-word; font-size:.78rem; margin:8px 0;}
+  .step-num{display:inline-flex; width:22px; height:22px; border-radius:999px; background:var(--primary); color:#fff; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; margin-inline-end:6px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* ================= ICONS ================= */
+function Icon({ children, size=18 }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
+}
+const IPlus=(p)=><Icon {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Icon>;
+const ICheck=(p)=><Icon {...p}><polyline points="20 6 9 17 4 12"/></Icon>;
+const IX=(p)=><Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>;
+const ITrash=(p)=><Icon {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></Icon>;
+const IPencil=(p)=><Icon {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Icon>;
+const IClock=(p)=><Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>;
+const IUsers=(p)=><Icon {...p}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>;
+const ICircleI=(p)=><Icon {...p}><circle cx="12" cy="12" r="9"/></Icon>;
+const IBell=(p)=><Icon {...p}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></Icon>;
+const IChevronUp=(p)=><Icon {...p}><polyline points="18 15 12 9 6 15"/></Icon>;
+const IChevronDown=(p)=><Icon {...p}><polyline points="6 9 12 15 18 9"/></Icon>;
+const IChevronRight=(p)=><Icon {...p}><polyline points="9 18 15 12 9 6"/></Icon>;
+const IChevronLeft=(p)=><Icon {...p}><polyline points="15 18 9 12 15 6"/></Icon>;
+const ICalendar=(p)=><Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></Icon>;
+const IGrid=(p)=><Icon {...p}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></Icon>;
+const ITable=(p)=><Icon {...p}><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></Icon>;
+const IRoute=(p)=><Icon {...p}><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></Icon>;
+const ITarget=(p)=><Icon {...p}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></Icon>;
+const IRepeat=(p)=><Icon {...p}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></Icon>;
+const ITag=(p)=><Icon {...p}><path d="M20.59 13.41 13.41 20.6a2 2 0 0 1-2.82 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></Icon>;
+const IBarChart=(p)=><Icon {...p}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></Icon>;
+const ISettings=(p)=><Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>;
+const IFlag=({size=16,color='currentColor'})=>(<svg width={size} height={size} viewBox="0 0 24 24"><path d="M5 3v18h1.6v-7.2c1-.4 2.1-.6 3.3-.6 2.5 0 4.6 1.7 7.1 1.7 1.2 0 2.3-.3 3.3-.8V4.3c-1 .5-2.1.8-3.3.8-2.5 0-4.6-1.7-7.1-1.7-1.2 0-2.3.2-3.3.6V3H5z" fill={color}/></svg>);
+const IWallet=(p)=><Icon {...p}><path d="M21 12V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/><path d="M18 12a1.5 1.5 0 0 0 0 3h3v-3z"/><path d="M3 8h14"/></Icon>;
+const ILogout=(p)=><Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></Icon>;
+
+/* ================= constants & helpers ================= */
+const PRIORITY_META = { none:{label:'بدون اولویت', color:'#9AA5B1'}, low:{label:'کم', color:'#2FB8A6'}, medium:{label:'متوسط', color:'#F5A623'}, high:{label:'زیاد', color:'#E5484D'} };
+const PRIORITY_ORDER=['none','low','medium','high'];
+const TYPE_META = { task:{label:'کار', icon:ICircleI}, event:{label:'رویداد', icon:ICalendar}, meeting:{label:'میتینگ', icon:IUsers}, reminder:{label:'یادآوری', icon:IBell} };
+const TYPE_ORDER=['task','event','meeting','reminder'];
+const STATUS_META = { 'not-started':{label:'شروع‌نشده', color:'#9AA5B1'}, 'in-progress':{label:'در حال انجام', color:'#F5A623'}, 'done':{label:'تمام‌شده', color:'#3B6FE0'} };
+const WEEKDAYS_FA=['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
+const WEEKDAY_HEAD_FA=['ش','ی','د','س','چ','پ','ج'];
+const WEEKDAY_HEAD_EN=['Sat','Sun','Mon','Tue','Wed','Thu','Fri'];
+const TAB_LABELS={today:'امروز', week:'هفته', month:'ماه', schedule:'برنامه هفتگی', roadmap:'نقشه‌راه', goals:'اهداف', habits:'عادت‌ها', categories:'حوزه‌ها', finance:'مالی', stats:'آمار'};
+const TAB_ICONS={today:IClock, week:IGrid, month:ICalendar, schedule:ITable, roadmap:IRoute, goals:ITarget, habits:IRepeat, categories:ITag, finance:IWallet, stats:IBarChart};
+const BUILTIN_ORDER_DEFAULT=['today','week','month','schedule','roadmap','goals','habits','categories','finance','stats'];
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function dateKey(d){ const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+function keyToDate(k){ const [y,m,d]=k.split('-').map(Number); return new Date(y,m-1,d); }
+function getWeekStart(d){ const day=d.getDay(); const diff=(day+1)%7; const s=new Date(d); s.setDate(d.getDate()-diff); s.setHours(0,0,0,0); return s; }
+function weekCol(d){ return (d.getDay()+1)%7; }
+function fmtDate(d, opts, calendarType){ return d.toLocaleDateString(calendarType==='gregorian'?'en-US':'fa-IR', opts); }
+function fmtMoney(n){ n=Math.round(n||0); return (n<0?'-':'')+Math.abs(n).toLocaleString('fa-IR'); }
+function getJalaliParts(date){
+  const parts = new Intl.DateTimeFormat('fa-IR-u-ca-persian-nu-latn', {year:'numeric',month:'numeric',day:'numeric'}).formatToParts(date);
+  const obj={}; parts.forEach(p=>{ if(p.type!=='literal') obj[p.type]=parseInt(p.value,10); });
+  return { jy:obj.year, jm:obj.month, jd:obj.day };
+}
+function monthGrid(anchor, calendarType){
+  if (calendarType==='gregorian'){ const y=anchor.getFullYear(), m=anchor.getMonth(); return { first:new Date(y,m,1), last:new Date(y,m+1,0) }; }
+  const { jy, jm } = getJalaliParts(anchor);
+  let first=new Date(anchor);
+  while(true){ const prev=new Date(first); prev.setDate(prev.getDate()-1); const p=getJalaliParts(prev); if(p.jy===jy&&p.jm===jm) first=prev; else break; }
+  let last=new Date(anchor);
+  while(true){ const next=new Date(last); next.setDate(next.getDate()+1); const p=getJalaliParts(next); if(p.jy===jy&&p.jm===jm) last=next; else break; }
+  return { first, last };
+}
+function shiftMonth(anchor, dir, calendarType){
+  if (calendarType==='gregorian'){ const d=new Date(anchor); d.setDate(1); d.setMonth(d.getMonth()+dir); return d; }
+  const { first, last } = monthGrid(anchor,'jalali');
+  if (dir>0){ const d=new Date(last); d.setDate(d.getDate()+1); return d; }
+  const d=new Date(first); d.setDate(d.getDate()-1); return d;
+}
+function monthLabel(anchor, calendarType){ return anchor.toLocaleDateString(calendarType==='gregorian'?'en-US':'fa-IR', {month:'long', year:'numeric'}); }
+function dayNumber(d, calendarType){ return calendarType==='gregorian' ? d.getDate() : getJalaliParts(d).jd; }
+function minutesBetween(start,end){ if(!start||!end) return 0; const [sh,sm]=start.split(':').map(Number), [eh,em]=end.split(':').map(Number); let diff=(eh*60+em)-(sh*60+sm); if(diff<0) diff+=24*60; return diff; }
+function fmtHours(mins){ const h=Math.floor(mins/60), m=mins%60; return `${h}:${String(m).padStart(2,'0')}`; }
+
+const DEFAULT_CATEGORIES=[
+  {id:'cat-study', name:'درس', color:'#6C5CE7'}, {id:'cat-work', name:'کار', color:'#00B894'},
+  {id:'cat-life', name:'زندگی روزمره', color:'#E17055'}, {id:'cat-health', name:'سلامتی', color:'#E5497D'},
+];
+const DEFAULT_FIN_CATEGORIES=[
+  {id:'salary', name:'حقوق', color:'#00B894', kind:'income'},
+  {id:'freelance', name:'پروژه/فریلنس', color:'#2FB8A6', kind:'income'},
+  {id:'food', name:'خوراک', color:'#E17055', kind:'expense'},
+  {id:'rent', name:'اجاره', color:'#E5484D', kind:'expense'},
+  {id:'transport', name:'حمل‌ونقل', color:'#F5A623', kind:'expense'},
+  {id:'fun', name:'تفریح', color:'#6C5CE7', kind:'expense'},
+];
+function defaultData(){
+  const cols=['sat','sun','mon','tue','wed','thu','fri'].map((id,i)=>({id, label:WEEKDAYS_FA[i]}));
+  const mkCells=()=>Object.fromEntries(cols.map(c=>[c.id,'']));
+  return {
+    settings:{ calendarType:'jalali', tabOrder:[...BUILTIN_ORDER_DEFAULT], hiddenTabs:[] },
+    categories: DEFAULT_CATEGORIES,
+    tasks: [], habits: [], goals: [], lists: [], notes: {},
+    phases: [
+      { id:uid(), order:1, title:'فاز ۱ — پایه', subtitle:'گرامر و لغت پایه', status:'in-progress', progress:30 },
+      { id:uid(), order:2, title:'فاز ۲ — مهارت‌ها', subtitle:'چهار مهارت اصلی', status:'not-started', progress:0 },
+      { id:uid(), order:3, title:'فاز ۳ — آزمون', subtitle:'شبیه‌سازی و مرور', status:'not-started', progress:0 },
+    ],
+    schedule: { columns: cols, rows: [
+      { id:uid(), label:'۰۸:۰۰-۰۹:۳۰', cells: mkCells() },
+      { id:uid(), label:'۰۹:۴۵-۱۱:۱۵', cells: mkCells() },
+      { id:uid(), label:'۱۱:۳۰-۱۳:۰۰', cells: mkCells() },
+    ]},
+    finance: {
+      accounts: [{id:'main', name:'حساب اصلی', initialBalance:0}],
+      categories: DEFAULT_FIN_CATEGORIES,
+      transactions: [],
+      debts: [],
+      budgets: {},
+    },
+  };
+}
+
+/* ================= FIREBASE ================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBFeIuJT-CjA-CU-RfutfQzuV2LUUNA-dQ",
+  authDomain: "luna-planner-b8c4e.firebaseapp.com",
+  projectId: "luna-planner-b8c4e",
+  storageBucket: "luna-planner-b8c4e.firebasestorage.app",
+  messagingSenderId: "243324963931",
+  appId: "1:243324963931:web:b7033d39651a617732c37e"
+};
+const NEEDS_SETUP = firebaseConfig.apiKey.indexOf('PASTE_') === 0;
+if(!NEEDS_SETUP){ firebase.initializeApp(firebaseConfig); }
+
+function SetupScreen(){
+  return (
+    <div className="center-screen">
+      <div className="setup-card">
+        <div style={{fontSize:'1.2rem',fontWeight:800,marginBottom:6}}>راه‌اندازی پلنر ابری (یک‌بار، حدود ۵ دقیقه)</div>
+        <div className="muted mb3" style={{fontSize:'.85rem'}}>این پلنر روی Firebase (سرویس رایگان گوگل) ذخیره می‌شه تا از هر گوشی/لپ‌تاپی با همون حساب بازش کنی، بدون نیاز به بک‌آپ دستی.</div>
+        <div className="mb3"><span className="step-num">۱</span> برو <code>console.firebase.google.com</code> و با جیمیلت وارد شو.</div>
+        <div className="mb3"><span className="step-num">۲</span> «Add project» بزن، یه اسم بده (مثلاً luna-planner) و پروژه رو بساز.</div>
+        <div className="mb3"><span className="step-num">۳</span> از منوی سمت راست: <b>Build → Authentication</b> → Get started → روش <b>Email/Password</b> رو فعال کن.</div>
+        <div className="mb3"><span className="step-num">۴</span> از همون منو: <b>Build → Firestore Database</b> → Create database → حالت <b>test mode</b> رو انتخاب کن.</div>
+        <div className="mb3"><span className="step-num">۵</span> برو <b>Project settings</b> (چرخ‌دنده بالا-چپ) → پایین صفحه «Your apps» → آیکون <b>&lt;/&gt;</b> بزن، یه اسم بده، و یه شیء <code>firebaseConfig</code> بهت می‌ده.</div>
+        <div className="mb3"><span className="step-num">۶</span> همین فایل HTML رو با یه ادیتور متن (مثلاً Notepad یا VS Code) باز کن، دنبال <code>firebaseConfig</code> بگرد و مقادیرش رو با چیزی که فایربیس بهت داد جایگزین کن، ذخیره کن، و دوباره تو مرورگر بازش کن.</div>
+        <div className="code-block">{`const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "..."
+};`}</div>
+        <div className="mb3"><span className="step-num">۷</span> (توصیه‌شده) تو Firestore Database → Rules، این قانون رو جایگزین کن تا فقط خودت به داده‌ت دسترسی داشته باشی:</div>
+        <div className="code-block">{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /planners/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}`}</div>
+        <div className="sticky-note">همه‌ی این کار فقط یک‌بار لازمه. بعدش هر بار فقط با ایمیل و رمزی که خودت تو مرحله‌ی ورود می‌سازی، از هر دستگاهی وارد می‌شی و دقیقاً همون اطلاعاتت رو می‌بینی.</div>
+      </div>
+    </div>
+  );
+}
+
+function translateAuthError(code){
+  const map={
+    'auth/wrong-password':'رمز عبور اشتباهه.', 'auth/user-not-found':'حسابی با این ایمیل پیدا نشد — اول ثبت‌نام کن.',
+    'auth/email-already-in-use':'این ایمیل قبلاً ثبت‌نام شده — وارد شو.', 'auth/weak-password':'رمز باید حداقل ۶ کاراکتر باشه.',
+    'auth/invalid-email':'ایمیل معتبر نیست.', 'auth/invalid-credential':'ایمیل یا رمز اشتباهه.',
+  };
+  return map[code] || ('خطا: '+code);
+}
+function SignInScreen(){
+  const [mode,setMode]=useState('signin');
+  const [email,setEmail]=useState(''); const [password,setPassword]=useState('');
+  const [err,setErr]=useState(''); const [busy,setBusy]=useState(false);
+  async function submit(){
+    if(!email.trim()||!password) return;
+    setErr(''); setBusy(true);
+    try{
+      if(mode==='signin') await firebase.auth().signInWithEmailAndPassword(email.trim(),password);
+      else await firebase.auth().createUserWithEmailAndPassword(email.trim(),password);
+    }catch(e){ setErr(translateAuthError(e.code)); }
+    setBusy(false);
+  }
+  return (
+    <div className="center-screen">
+      <div className="auth-card">
+        <div style={{fontSize:'1.2rem',fontWeight:800,marginBottom:2,textAlign:'center'}}>پلنر لونا</div>
+        <div className="muted mb4" style={{fontSize:'.8rem',textAlign:'center'}}>{mode==='signin'?'وارد حسابت شو':'یه حساب جدید بساز'}</div>
+        <div className="col">
+          <input className="input" type="email" placeholder="ایمیل" value={email} onChange={e=>setEmail(e.target.value)}/>
+          <input className="input" type="password" placeholder="رمز عبور (حداقل ۶ کاراکتر)" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>{if(e.key==='Enter') submit();}}/>
+          {err && <div style={{color:'var(--danger)',fontSize:'.78rem'}}>{err}</div>}
+          <button className="btn btn-primary" style={{justifyContent:'center'}} disabled={busy} onClick={submit}>{busy?'...':(mode==='signin'?'ورود':'ثبت‌نام')}</button>
+          <button className="btn btn-outline" style={{justifyContent:'center'}} onClick={()=>{setMode(mode==='signin'?'signup':'signin'); setErr('');}}>
+            {mode==='signin'?'حساب نداری؟ ثبت‌نام کن':'حساب داری؟ وارد شو'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+function LoadingScreen(){ return <div className="center-screen muted">در حال بارگذاری...</div>; }
+
+/* ================= small pickers ================= */
+function FlagPicker({ value, onChange, size=17 }){
+  return <div className="row">{PRIORITY_ORDER.map(p=>(
+    <button key={p} type="button" title={PRIORITY_META[p].label} onClick={()=>onChange(p)} className={"flag-btn"+(value===p?" sel":"")}><IFlag size={size} color={PRIORITY_META[p].color}/></button>
+  ))}</div>;
+}
+function TypePicker({ value, onChange }){
+  return <div className="row">{TYPE_ORDER.map(t=>{ const M=TYPE_META[t]; const Ic=M.icon;
+    return <button key={t} type="button" title={M.label} onClick={()=>onChange(t)} className={"type-btn"+(value===t?" sel":"")}><Ic size={15}/></button>;
+  })}</div>;
+}
+
+/* ================= ROOT: auth gate ================= */
+function Root(){
+  const [user,setUser]=useState(undefined);
+  useEffect(()=>{
+    if(NEEDS_SETUP) return;
+    const unsub=firebase.auth().onAuthStateChanged(u=>setUser(u));
+    return unsub;
+  },[]);
+  if(NEEDS_SETUP) return <SetupScreen/>;
+  if(user===undefined) return <LoadingScreen/>;
+  if(user===null) return <SignInScreen/>;
+  return <PlannerApp user={user}/>;
+}
+
+/* ================= Main Planner App ================= */
+function PlannerApp({user}){
+  const [data,setData]=useState(null);
+  const [tab,setTab]=useState('today');
+  const [selectedDateKey,setSelectedDateKey]=useState(dateKey(new Date()));
+  const [weekAnchor,setWeekAnchor]=useState(new Date());
+  const [monthAnchor,setMonthAnchor]=useState(new Date());
+  const firstLoad=useRef(true);
+
+  useEffect(()=>{
+    const ref=firebase.firestore().collection('planners').doc(user.uid);
+    const unsub=ref.onSnapshot(snap=>{
+      if(snap.exists()){
+        const remote=snap.data();
+        setData({ ...defaultData(), ...remote,
+          settings:{...defaultData().settings, ...(remote.settings||{})},
+          finance:{...defaultData().finance, ...(remote.finance||{})},
+        });
+      } else {
+        const fresh=defaultData();
+        ref.set(fresh).catch(e=>console.error('init failed',e));
+        setData(fresh);
+      }
+    }, err=>console.error('listen failed', err));
+    return unsub;
+  },[user.uid]);
+
+  useEffect(()=>{
+    if(data===null) return;
+    if(firstLoad.current){ firstLoad.current=false; return; }
+    const t=setTimeout(()=>{
+      firebase.firestore().collection('planners').doc(user.uid).set(data).catch(e=>console.error('save failed',e));
+    },500);
+    return ()=>clearTimeout(t);
+  },[data]);
+
+  if(data===null) return <LoadingScreen/>;
+
+  const calendarType=data.settings.calendarType;
+
+  function addTask(t){ setData(p=>({...p, tasks:[...p.tasks, {...t, id:uid(), done:false}]})); }
+  function toggleTask(id){ setData(p=>({...p, tasks:p.tasks.map(t=>t.id===id?{...t,done:!t.done}:t)})); }
+  function updateTask(id,patch){ setData(p=>({...p, tasks:p.tasks.map(t=>t.id===id?{...t,...patch}:t)})); }
+  function deleteTask(id){ setData(p=>({...p, tasks:p.tasks.filter(t=>t.id!==id)})); }
+  function setNote(key,text){ setData(p=>({...p, notes:{...p.notes,[key]:text}})); }
+
+  function addPhase(){ setData(p=>({...p, phases:[...p.phases, {id:uid(), order:p.phases.length+1, title:'فاز جدید', subtitle:'', status:'not-started', progress:0}]})); }
+  function updatePhase(id,patch){ setData(p=>({...p, phases:p.phases.map(x=>x.id===id?{...x,...patch}:x)})); }
+  function deletePhase(id){ setData(p=>({...p, phases:p.phases.filter(x=>x.id!==id)})); }
+  function movePhase(id,dir){ setData(p=>{ const phases=[...p.phases].sort((a,b)=>a.order-b.order); const idx=phases.findIndex(x=>x.id===id), swap=idx+dir; if(swap<0||swap>=phases.length) return p; const t=phases[idx].order; phases[idx].order=phases[swap].order; phases[swap].order=t; return {...p, phases}; }); }
+
+  function addGoal(title,deadline){ setData(p=>({...p, goals:[...p.goals, {id:uid(), title, deadline, subtasks:[]}]})); }
+  function updateGoal(id,patch){ setData(p=>({...p, goals:p.goals.map(g=>g.id===id?{...g,...patch}:g)})); }
+  function deleteGoal(id){ setData(p=>({...p, goals:p.goals.filter(g=>g.id!==id)})); }
+  function addSubtask(goalId,title){ setData(p=>({...p, goals:p.goals.map(g=>g.id===goalId?{...g, subtasks:[...g.subtasks,{id:uid(),title,done:false}]}:g)})); }
+  function toggleSubtask(goalId,subId){ setData(p=>({...p, goals:p.goals.map(g=>g.id===goalId?{...g, subtasks:g.subtasks.map(s=>s.id===subId?{...s,done:!s.done}:s)}:g)})); }
+  function deleteSubtask(goalId,subId){ setData(p=>({...p, goals:p.goals.map(g=>g.id===goalId?{...g, subtasks:g.subtasks.filter(s=>s.id!==subId)}:g)})); }
+
+  function addHabit(name){ setData(p=>({...p, habits:[...p.habits, {id:uid(), name, log:{}}]})); }
+  function toggleHabitDay(id,key){ setData(p=>({...p, habits:p.habits.map(h=>{ if(h.id!==id) return h; const log={...h.log}; if(log[key]) delete log[key]; else log[key]=true; return {...h,log}; })})); }
+  function deleteHabit(id){ setData(p=>({...p, habits:p.habits.filter(h=>h.id!==id)})); }
+
+  function addCategory(cat){ setData(p=>({...p, categories:[...p.categories, {...cat, id:uid()}]})); }
+  function updateCategory(id,patch){ setData(p=>({...p, categories:p.categories.map(c=>c.id===id?{...c,...patch}:c)})); }
+  function deleteCategory(id){ setData(p=>({...p, categories:p.categories.filter(c=>c.id!==id)})); }
+
+  function addScheduleColumn(){ setData(p=>{ const col={id:uid(), label:'ستون جدید'}; return {...p, schedule:{ columns:[...p.schedule.columns,col], rows:p.schedule.rows.map(r=>({...r, cells:{...r.cells,[col.id]:''}})) }}; }); }
+  function deleteScheduleColumn(colId){ setData(p=>({...p, schedule:{ columns:p.schedule.columns.filter(c=>c.id!==colId), rows:p.schedule.rows.map(r=>{ const cells={...r.cells}; delete cells[colId]; return {...r,cells}; }) }})); }
+  function updateScheduleColumn(colId,label){ setData(p=>({...p, schedule:{...p.schedule, columns:p.schedule.columns.map(c=>c.id===colId?{...c,label}:c)}})); }
+  function addScheduleRow(){ setData(p=>{ const cells=Object.fromEntries(p.schedule.columns.map(c=>[c.id,''])); return {...p, schedule:{...p.schedule, rows:[...p.schedule.rows, {id:uid(), label:'ردیف جدید', cells}]}}; }); }
+  function deleteScheduleRow(rowId){ setData(p=>({...p, schedule:{...p.schedule, rows:p.schedule.rows.filter(r=>r.id!==rowId)}})); }
+  function updateScheduleRowLabel(rowId,label){ setData(p=>({...p, schedule:{...p.schedule, rows:p.schedule.rows.map(r=>r.id===rowId?{...r,label}:r)}})); }
+  function updateScheduleCell(rowId,colId,value){ setData(p=>({...p, schedule:{...p.schedule, rows:p.schedule.rows.map(r=>r.id===rowId?{...r, cells:{...r.cells,[colId]:value}}:r)}})); }
+
+  function setCalendarType(v){ setData(p=>({...p, settings:{...p.settings, calendarType:v}})); }
+  function moveBuiltinTab(id,dir){ setData(p=>{ const order=[...p.settings.tabOrder]; const idx=order.indexOf(id); const swap=idx+dir; if(swap<0||swap>=order.length) return p; const t=order[idx]; order[idx]=order[swap]; order[swap]=t; return {...p, settings:{...p.settings, tabOrder:order}}; }); }
+  function toggleBuiltinTabHidden(id){ setData(p=>{ const hidden=new Set(p.settings.hiddenTabs); hidden.has(id)?hidden.delete(id):hidden.add(id); if(tab===id && hidden.has(id)) setTab('today'); return {...p, settings:{...p.settings, hiddenTabs:[...hidden]}}; }); }
+
+  function addList(name){ const id=uid(); setData(p=>({...p, lists:[...p.lists,{id, name, icon:'📋', color:'#3B6FE0', items:[]}]})); setTab('list:'+id); }
+  function updateList(id,patch){ setData(p=>({...p, lists:p.lists.map(l=>l.id===id?{...l,...patch}:l)})); }
+  function deleteList(id){ setData(p=>({...p, lists:p.lists.filter(l=>l.id!==id)})); setTab('today'); }
+  function addListItem(listId,title){ setData(p=>({...p, lists:p.lists.map(l=>l.id===listId?{...l, items:[...l.items,{id:uid(),title,done:false,priority:'none'}]}:l)})); }
+  function toggleListItem(listId,itemId){ setData(p=>({...p, lists:p.lists.map(l=>l.id===listId?{...l, items:l.items.map(it=>it.id===itemId?{...it,done:!it.done}:it)}:l)})); }
+  function updateListItemPriority(listId,itemId,priority){ setData(p=>({...p, lists:p.lists.map(l=>l.id===listId?{...l, items:l.items.map(it=>it.id===itemId?{...it,priority}:it)}:l)})); }
+  function deleteListItem(listId,itemId){ setData(p=>({...p, lists:p.lists.map(l=>l.id===listId?{...l, items:l.items.filter(it=>it.id!==itemId)}:l)})); }
+
+  /* finance handlers */
+  function addAccount(name,initialBalance){ setData(p=>({...p, finance:{...p.finance, accounts:[...p.finance.accounts, {id:uid(),name,initialBalance:Number(initialBalance)||0}]}})); }
+  function updateAccount(id,patch){ setData(p=>({...p, finance:{...p.finance, accounts:p.finance.accounts.map(a=>a.id===id?{...a,...patch}:a)}})); }
+  function deleteAccount(id){ setData(p=>{ if(p.finance.accounts.length<=1) return p; const remain=p.finance.accounts.filter(a=>a.id!==id); const fb=remain[0].id; return {...p, finance:{...p.finance, accounts:remain, transactions:p.finance.transactions.map(t=>t.accountId===id?{...t,accountId:fb}:t)}}; }); }
+  function addFinCategory(name,color,kind){ setData(p=>({...p, finance:{...p.finance, categories:[...p.finance.categories, {id:uid(),name,color,kind}]}})); }
+  function deleteFinCategory(id){ setData(p=>({...p, finance:{...p.finance, categories:p.finance.categories.filter(c=>c.id!==id)}})); }
+  function addTransaction(tx){ setData(p=>({...p, finance:{...p.finance, transactions:[...p.finance.transactions, {...tx, id:uid()}]}})); }
+  function deleteTransaction(id){ setData(p=>({...p, finance:{...p.finance, transactions:p.finance.transactions.filter(t=>t.id!==id)}})); }
+  function addDebt(debt){ setData(p=>({...p, finance:{...p.finance, debts:[...p.finance.debts, {...debt, id:uid(), paid:0, settled:false}]}})); }
+  function addDebtPayment(id,amount){ setData(p=>({...p, finance:{...p.finance, debts:p.finance.debts.map(d=>{ if(d.id!==id) return d; const paid=Math.min(d.amount, d.paid+Number(amount||0)); return {...d, paid, settled:paid>=d.amount}; })}})); }
+  function deleteDebt(id){ setData(p=>({...p, finance:{...p.finance, debts:p.finance.debts.filter(d=>d.id!==id)}})); }
+  function setBudget(catId,limit){ setData(p=>({...p, finance:{...p.finance, budgets:{...p.finance.budgets, [catId]:Number(limit)||0}}})); }
+
+  function signOut(){ firebase.auth().signOut(); }
+
+  const dayTasks = data.tasks.filter(t=>t.date===selectedDateKey).sort((a,b)=>(a.startTime||'99:99').localeCompare(b.startTime||'99:99'));
+  const doneCount = dayTasks.filter(t=>t.done).length;
+  const notesText = data.notes[selectedDateKey] || '';
+  const weekStart = getWeekStart(weekAnchor);
+  const weekDays = Array.from({length:7},(_,i)=>{ const d=new Date(weekStart); d.setDate(weekStart.getDate()+i); return d; });
+  const visibleBuiltinIds = data.settings.tabOrder.filter(id=>!data.settings.hiddenTabs.includes(id));
+  const currentList = tab.startsWith('list:') ? data.lists.find(l=>l.id===tab.slice(5)) : null;
+
+  return (
+    <div className="app">
+      <div className="app-header">
+        <div className="app-title">پلنر لونا</div>
+        <div className="app-subtitle">روی ابر ذخیره می‌شه — از هر دستگاهی با همین حساب وارد شو</div>
+      </div>
+      <div className="tabbar">
+        <div className="tabbar-inner">
+          {visibleBuiltinIds.map(id=>{ const Ic=TAB_ICONS[id]; return <button key={id} className={"tab-btn"+(tab===id?" active":"")} onClick={()=>setTab(id)}><Ic size={15}/>{TAB_LABELS[id]}</button>; })}
+          {data.lists.map(l=>(<button key={l.id} className={"tab-btn"+(tab==='list:'+l.id?" active":"")} onClick={()=>setTab('list:'+l.id)}><span className="list-tab-emoji">{l.icon||'📋'}</span>{l.name}</button>))}
+          <button className="tab-btn" onClick={()=>addList('لیست جدید')}><IPlus size={15}/>لیست</button>
+          <button className={"tab-btn"+(tab==='settings'?" active":"")} onClick={()=>setTab('settings')}><ISettings size={15}/>تنظیمات</button>
+        </div>
+      </div>
+      <div className="content">
+        {tab==='today' && <TodayTab selectedDateKey={selectedDateKey} setSelectedDateKey={setSelectedDateKey}
+          dayTasks={dayTasks} doneCount={doneCount} categories={data.categories} calendarType={calendarType}
+          addTask={addTask} toggleTask={toggleTask} updateTask={updateTask} deleteTask={deleteTask}
+          notesText={notesText} setNote={setNote}/>}
+        {tab==='week' && <WeekTab weekDays={weekDays} tasks={data.tasks} weekAnchor={weekAnchor} setWeekAnchor={setWeekAnchor}
+          categories={data.categories} calendarType={calendarType} goToDay={(k)=>{setSelectedDateKey(k); setTab('today');}}/>}
+        {tab==='month' && <MonthTab anchor={monthAnchor} setAnchor={setMonthAnchor} calendarType={calendarType} tasks={data.tasks}
+          categories={data.categories} goToDay={(k)=>{setSelectedDateKey(k); setTab('today');}}/>}
+        {tab==='schedule' && <ScheduleTab schedule={data.schedule} addColumn={addScheduleColumn} deleteColumn={deleteScheduleColumn}
+          updateColumn={updateScheduleColumn} addRow={addScheduleRow} deleteRow={deleteScheduleRow}
+          updateRowLabel={updateScheduleRowLabel} updateCell={updateScheduleCell}/>}
+        {tab==='roadmap' && <RoadmapTab phases={[...data.phases].sort((a,b)=>a.order-b.order)} addPhase={addPhase}
+          updatePhase={updatePhase} deletePhase={deletePhase} movePhase={movePhase}/>}
+        {tab==='goals' && <GoalsTab goals={data.goals} calendarType={calendarType} addGoal={addGoal} updateGoal={updateGoal} deleteGoal={deleteGoal}
+          addSubtask={addSubtask} toggleSubtask={toggleSubtask} deleteSubtask={deleteSubtask}/>}
+        {tab==='habits' && <HabitsTab habits={data.habits} addHabit={addHabit} toggleHabitDay={toggleHabitDay} deleteHabit={deleteHabit}/>}
+        {tab==='categories' && <CategoriesTab categories={data.categories} tasks={data.tasks} addCategory={addCategory}
+          updateCategory={updateCategory} deleteCategory={deleteCategory}/>}
+        {tab==='finance' && <FinanceTab fin={data.finance} calendarType={calendarType}
+          addAccount={addAccount} updateAccount={updateAccount} deleteAccount={deleteAccount}
+          addFinCategory={addFinCategory} deleteFinCategory={deleteFinCategory}
+          addTransaction={addTransaction} deleteTransaction={deleteTransaction}
+          addDebt={addDebt} addDebtPayment={addDebtPayment} deleteDebt={deleteDebt} setBudget={setBudget}/>}
+        {tab==='stats' && <StatsTab tasks={data.tasks} habits={data.habits} goals={data.goals} categories={data.categories}/>}
+        {currentList && <ListTab list={currentList} updateList={updateList} deleteList={deleteList}
+          addItem={addListItem} toggleItem={toggleListItem} updateItemPriority={updateListItemPriority} deleteItem={deleteListItem}/>}
+        {tab==='settings' && <SettingsTab calendarType={calendarType} setCalendarType={setCalendarType}
+          tabOrder={data.settings.tabOrder} hiddenTabs={data.settings.hiddenTabs} moveBuiltinTab={moveBuiltinTab} toggleBuiltinTabHidden={toggleBuiltinTabHidden}
+          lists={data.lists} addList={addList} deleteList={deleteList} signOut={signOut} email={user.email}/>}
+      </div>
+    </div>
+  );
+}
+
+/* ================= Today ================= */
+function TodayTab({selectedDateKey,setSelectedDateKey,dayTasks,doneCount,categories,calendarType,addTask,toggleTask,updateTask,deleteTask,notesText,setNote}){
+  const [editingId,setEditingId]=useState(null);
+  const [form,setForm]=useState({title:'',startTime:'',endTime:'',priority:'none',categoryId:categories[0]?.id||'',type:'task'});
+  const d=keyToDate(selectedDateKey);
+  const isToday=selectedDateKey===dateKey(new Date());
+  function shift(days){ const nd=new Date(d); nd.setDate(d.getDate()+days); setSelectedDateKey(dateKey(nd)); }
+  function submit(){ if(!form.title.trim()) return; addTask({...form, title:form.title.trim(), date:selectedDateKey}); setForm({title:'',startTime:'',endTime:'',priority:'none',categoryId:categories[0]?.id||'',type:'task'}); }
+  return (
+    <div>
+      <div className="day-nav">
+        <button className="btn-icon" onClick={()=>shift(-1)}><IChevronRight/></button>
+        <div className="day-nav-center"><div className="day-nav-title">{fmtDate(d,{weekday:'long'},calendarType)}</div><div className="muted" style={{fontSize:'.85rem'}}>{fmtDate(d,{day:'numeric',month:'long',year:'numeric'},calendarType)}</div></div>
+        <button className="btn-icon" onClick={()=>shift(1)}><IChevronLeft/></button>
+      </div>
+      {!isToday && <div style={{textAlign:'center'}} className="mb3"><button onClick={()=>setSelectedDateKey(dateKey(new Date()))} style={{color:'var(--primary)',fontWeight:600,fontSize:'.8rem'}}>بازگشت به امروز</button></div>}
+      {dayTasks.length>0 && (<div className="mb4"><div className="progress-outer"><div className="progress-inner" style={{width:`${(doneCount/dayTasks.length)*100}%`}}/></div><div className="muted mt2" style={{fontSize:'.78rem'}}>{doneCount} از {dayTasks.length} کار انجام شد</div></div>)}
+      <div className="card mb5">
+        <input className="input-plain" placeholder="چه کاری داری؟" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} onKeyDown={e=>{if(e.key==='Enter') submit();}}/>
+        <div className="row-wrap mt3">
+          <span className="muted" style={{fontSize:'.72rem'}}>از</span>
+          <input type="time" className="input" value={form.startTime} onChange={e=>setForm({...form,startTime:e.target.value})}/>
+          <span className="muted" style={{fontSize:'.72rem'}}>تا</span>
+          <input type="time" className="input" value={form.endTime} onChange={e=>setForm({...form,endTime:e.target.value})}/>
+          <select className="input" value={form.categoryId} onChange={e=>setForm({...form,categoryId:e.target.value})}>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
+        </div>
+        <div className="row-wrap mt3">
+          <TypePicker value={form.type} onChange={t=>setForm({...form,type:t})}/>
+          <div style={{width:1, alignSelf:'stretch', background:'var(--border)'}}/>
+          <FlagPicker value={form.priority} onChange={p=>setForm({...form,priority:p})}/>
+          <button onClick={submit} className="btn btn-primary" style={{marginRight:'auto'}}><IPlus size={14}/>افزودن</button>
+        </div>
+      </div>
+      {dayTasks.length===0 && <div className="empty">هنوز کاری برای این روز ثبت نشده.</div>}
+      <div className="col">{dayTasks.map(t=>(<TaskRow key={t.id} task={t} categories={categories} editing={editingId===t.id} onEdit={()=>setEditingId(t.id)} onCancelEdit={()=>setEditingId(null)} onToggle={()=>toggleTask(t.id)} onDelete={()=>deleteTask(t.id)} onSave={(patch)=>{updateTask(t.id,patch); setEditingId(null);}}/>))}</div>
+      <div className="mt3"><div style={{fontWeight:700,fontSize:'.85rem',marginBottom:6}}>یادداشت این روز</div><textarea className="input" placeholder="هر چی به ذهنت می‌رسه بنویس..." value={notesText} onChange={e=>setNote(selectedDateKey,e.target.value)}/></div>
+    </div>
+  );
+}
+function TaskRow({task,categories,editing,onEdit,onCancelEdit,onToggle,onDelete,onSave}){
+  const [draft,setDraft]=useState(task);
+  useEffect(()=>{ if(editing) setDraft(task); },[editing]);
+  const cat=categories.find(c=>c.id===task.categoryId);
+  const TypeIcon=TYPE_META[task.type].icon;
+  if(editing){
+    return (
+      <div className="card" style={{boxShadow:'inset 0 0 0 1.5px var(--primary)'}}>
+        <input className="input-plain mb2" value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/>
+        <div className="row-wrap mb2">
+          <input type="time" className="input" value={draft.startTime||''} onChange={e=>setDraft({...draft,startTime:e.target.value})}/>
+          <span className="muted" style={{fontSize:'.72rem'}}>تا</span>
+          <input type="time" className="input" value={draft.endTime||''} onChange={e=>setDraft({...draft,endTime:e.target.value})}/>
+          <select className="input" value={draft.categoryId} onChange={e=>setDraft({...draft,categoryId:e.target.value})}>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
+        </div>
+        <div className="row-wrap">
+          <TypePicker value={draft.type} onChange={t=>setDraft({...draft,type:t})}/>
+          <div style={{width:1, alignSelf:'stretch', background:'var(--border)'}}/>
+          <FlagPicker value={draft.priority} onChange={p=>setDraft({...draft,priority:p})}/>
+          <button onClick={()=>onSave(draft)} className="btn-icon" style={{marginRight:'auto',color:'var(--primary)'}}><ICheck size={18}/></button>
+          <button onClick={onCancelEdit} className="btn-icon"><IX size={18}/></button>
+          <button onClick={onDelete} className="btn-icon btn-danger"><ITrash size={16}/></button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="task-row">
+      <button onClick={onToggle} className={"task-check"+(task.done?" done":"")}>{task.done && <ICheck size={13}/>}</button>
+      {cat && <span className="cat-dot" style={{background:cat.color}}/>}
+      <div className="grow">
+        <div className={"task-title"+(task.done?" done":"")}>{task.title}</div>
+        <div className="task-meta">
+          {(task.startTime||task.endTime) && <span className="row" style={{gap:3}}><IClock size={11}/>{task.startTime}{task.endTime?` – ${task.endTime}`:''}</span>}
+          <span className="row" style={{gap:3}}><TypeIcon size={11}/>{TYPE_META[task.type].label}</span>
+          {cat && <span className="muted">{cat.name}</span>}
+        </div>
+      </div>
+      {task.priority!=='none' && <IFlag size={16} color={PRIORITY_META[task.priority].color}/>}
+      <button onClick={onEdit} className="btn-icon"><IPencil size={15}/></button>
+    </div>
+  );
+}
+
+/* ================= Week ================= */
+function WeekTab({weekDays,tasks,weekAnchor,setWeekAnchor,categories,calendarType,goToDay}){
+  function shiftWeek(days){ const nd=new Date(weekAnchor); nd.setDate(weekAnchor.getDate()+days); setWeekAnchor(nd); }
+  return (
+    <div>
+      <div className="day-nav"><button className="btn-icon" onClick={()=>shiftWeek(-7)}><IChevronRight/></button><button onClick={()=>setWeekAnchor(new Date())} style={{color:'var(--primary)',fontWeight:600,fontSize:'.82rem'}}>این هفته</button><button className="btn-icon" onClick={()=>shiftWeek(7)}><IChevronLeft/></button></div>
+      <div className="col">
+        {weekDays.map((d,i)=>{
+          const key=dateKey(d);
+          const items=tasks.filter(t=>t.date===key).sort((a,b)=>(a.startTime||'99:99').localeCompare(b.startTime||'99:99'));
+          const isToday=key===dateKey(new Date());
+          return (
+            <div key={key} onClick={()=>goToDay(key)} className={"week-day-card"+(isToday?" today":"")}>
+              <div className="between"><div style={{fontWeight:700,fontSize:'.88rem'}}>{WEEKDAYS_FA[i]} <span className="muted" style={{fontWeight:400}}>· {fmtDate(d,{day:'numeric',month:'short'},calendarType)}</span></div><div className="muted" style={{fontSize:'.75rem'}}>{items.length?`${items.filter(t=>t.done).length}/${items.length}`:''}</div></div>
+              {items.length===0 ? <div className="muted mt2" style={{fontSize:'.78rem'}}>کاری ثبت نشده</div> : (
+                <div className="col mt2" style={{gap:5}}>
+                  {items.slice(0,4).map(t=>{ const cat=categories.find(c=>c.id===t.categoryId);
+                    return (<div key={t.id} className="row" style={{fontSize:'.8rem'}}>{cat && <span className="cat-dot" style={{background:cat.color}}/>}<span style={{textDecoration:t.done?'line-through':'none', color:t.done?'var(--ink-muted)':'var(--ink)'}}>{t.title}</span>{t.priority!=='none' && <IFlag size={12} color={PRIORITY_META[t.priority].color}/>}{t.startTime && <span className="muted" style={{marginRight:'auto',fontSize:'.72rem'}}>{t.startTime}</span>}</div>);
+                  })}
+                  {items.length>4 && <div className="muted" style={{fontSize:'.72rem'}}>+ {items.length-4} مورد دیگر</div>}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ================= Month ================= */
+function MonthTab({anchor,setAnchor,calendarType,tasks,categories,goToDay}){
+  const {first,last}=monthGrid(anchor,calendarType);
+  const days=[]; let d=new Date(first); while(d<=last){ days.push(new Date(d)); d.setDate(d.getDate()+1); }
+  const padStart=weekCol(first);
+  const headers=calendarType==='gregorian'?WEEKDAY_HEAD_EN:WEEKDAY_HEAD_FA;
+  return (
+    <div>
+      <div className="month-nav"><button className="btn-icon" onClick={()=>setAnchor(shiftMonth(anchor,-1,calendarType))}><IChevronRight/></button><div className="month-label">{monthLabel(anchor,calendarType)}</div><button className="btn-icon" onClick={()=>setAnchor(shiftMonth(anchor,1,calendarType))}><IChevronLeft/></button></div>
+      <div className="month-grid-headers">{headers.map(h=><div key={h}>{h}</div>)}</div>
+      <div className="month-grid">
+        {Array.from({length:padStart}).map((_,i)=><div key={'p'+i} className="month-cell empty"/>)}
+        {days.map(day=>{
+          const key=dateKey(day); const items=tasks.filter(t=>t.date===key); const isToday=key===dateKey(new Date());
+          const catIds=[...new Set(items.map(t=>t.categoryId))].slice(0,4);
+          return (
+            <div key={key} className="month-cell" onClick={()=>goToDay(key)}>
+              <div className={"month-num"+(isToday?" today-circle":"")}>{dayNumber(day,calendarType)}</div>
+              {catIds.length>0 && <div className="row" style={{gap:2}}>{catIds.map(cid=>{ const c=categories.find(x=>x.id===cid); return c ? <span key={cid} className="month-dot" style={{background:c.color}}/> : null; })}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ================= Schedule ================= */
+function ScheduleTab({schedule,addColumn,deleteColumn,updateColumn,addRow,deleteRow,updateRowLabel,updateCell}){
+  return (
+    <div>
+      <div className="between mb3"><div style={{fontWeight:700,fontSize:'1rem'}}>برنامه هفتگی</div><div className="row"><button className="btn btn-outline" onClick={addColumn}><IPlus size={13}/>ستون</button><button className="btn btn-primary" onClick={addRow}><IPlus size={13}/>ردیف</button></div></div>
+      <div className="schedule-wrap">
+        <table className="schedule-table">
+          <thead><tr><th className="corner"></th>{schedule.columns.map(col=>(<th key={col.id}><div className="col-head"><input value={col.label} onChange={e=>updateColumn(col.id,e.target.value)}/><button className="btn-icon" onClick={()=>deleteColumn(col.id)}><IX size={12}/></button></div></th>))}</tr></thead>
+          <tbody>{schedule.rows.map(row=>(<tr key={row.id}><td><div className="col-head"><input value={row.label} onChange={e=>updateRowLabel(row.id,e.target.value)}/><button className="btn-icon" onClick={()=>deleteRow(row.id)}><IX size={12}/></button></div></td>{schedule.columns.map(col=>(<td key={col.id}><input placeholder="—" value={row.cells[col.id]||''} onChange={e=>updateCell(row.id,col.id,e.target.value)}/></td>))}</tr>))}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ================= Roadmap ================= */
+function RoadmapTab({phases,addPhase,updatePhase,deletePhase,movePhase}){
+  return (
+    <div>
+      <div className="between mb4"><div style={{fontWeight:700,fontSize:'1rem'}}>نقشه‌راه</div><button className="btn btn-primary" onClick={addPhase}><IPlus size={14}/>فاز جدید</button></div>
+      <div className="col">
+        {phases.map((p,idx)=>{ const status=STATUS_META[p.status]; return (
+          <div key={p.id} className="phase-card">
+            <div style={{position:'absolute', insetInlineEnd:0, top:0, bottom:0, width:4, background:status.color}}/>
+            <div className="row" style={{alignItems:'flex-start'}}>
+              <div className="phase-order">{idx+1}</div>
+              <div className="grow"><input className="input-plain" style={{fontWeight:700,fontSize:'.9rem'}} value={p.title} onChange={e=>updatePhase(p.id,{title:e.target.value})}/><input className="input-plain muted" style={{fontSize:'.78rem'}} placeholder="توضیح کوتاه" value={p.subtitle} onChange={e=>updatePhase(p.id,{subtitle:e.target.value})}/></div>
+              <div className="col" style={{gap:2}}><button className="btn-icon" onClick={()=>movePhase(p.id,-1)}><IChevronUp size={14}/></button><button className="btn-icon" onClick={()=>movePhase(p.id,1)}><IChevronDown size={14}/></button></div>
+            </div>
+            <div className="row-wrap mt3">{Object.entries(STATUS_META).map(([k,m])=>(<button key={k} onClick={()=>updatePhase(p.id,{status:k})} className={"status-btn"+(p.status===k?" active":"")} style={p.status===k?{background:m.color}:{}}>{m.label}</button>))}<button className="btn-icon btn-danger" style={{marginRight:'auto'}} onClick={()=>deletePhase(p.id)}><ITrash size={15}/></button></div>
+            <div className="row mt2"><input type="range" min="0" max="100" value={p.progress} onChange={e=>updatePhase(p.id,{progress:Number(e.target.value)})}/><span className="muted" style={{fontSize:'.75rem',width:32}}>{p.progress}%</span></div>
+          </div>
+        );})}
+      </div>
+    </div>
+  );
+}
+
+/* ================= Goals ================= */
+function GoalsTab({goals,calendarType,addGoal,updateGoal,deleteGoal,addSubtask,toggleSubtask,deleteSubtask}){
+  const [title,setTitle]=useState(''); const [deadline,setDeadline]=useState('');
+  return (
+    <div>
+      <div className="card mb5"><input className="input-plain" placeholder="هدف بلندمدت چیه؟" value={title} onChange={e=>setTitle(e.target.value)}/><div className="row-wrap mt2"><input type="date" className="input" value={deadline} onChange={e=>setDeadline(e.target.value)}/><button className="btn btn-primary" style={{marginRight:'auto'}} onClick={()=>{ if(!title.trim())return; addGoal(title.trim(),deadline); setTitle(''); setDeadline(''); }}><IPlus size={14}/>افزودن هدف</button></div></div>
+      {goals.length===0 && <div className="empty">هنوز هدفی ثبت نکردی.</div>}
+      <div className="col">{goals.map(g=><GoalCard key={g.id} goal={g} calendarType={calendarType} updateGoal={updateGoal} deleteGoal={deleteGoal} addSubtask={addSubtask} toggleSubtask={toggleSubtask} deleteSubtask={deleteSubtask}/>)}</div>
+    </div>
+  );
+}
+function GoalCard({goal,calendarType,updateGoal,deleteGoal,addSubtask,toggleSubtask,deleteSubtask}){
+  const [subTitle,setSubTitle]=useState('');
+  const total=goal.subtasks.length, done=goal.subtasks.filter(s=>s.done).length; const pct=total?Math.round((done/total)*100):0;
+  return (
+    <div className="goal-card">
+      <div className="row" style={{alignItems:'flex-start'}}><input className="input-plain grow" style={{fontWeight:600,fontSize:'.88rem'}} value={goal.title} onChange={e=>updateGoal(goal.id,{title:e.target.value})}/><button className="btn-icon btn-danger" onClick={()=>deleteGoal(goal.id)}><ITrash size={15}/></button></div>
+      {goal.deadline && <div className="muted mt2" style={{fontSize:'.72rem'}}>مهلت: {fmtDate(keyToDate(goal.deadline),{day:'numeric',month:'long',year:'numeric'},calendarType)}</div>}
+      <div className="row mt2"><div className="progress-outer grow"><div className="progress-inner" style={{width:pct+'%',background:'#F5A623'}}/></div><span className="muted" style={{fontSize:'.75rem'}}>{pct}%</span></div>
+      <div className="col mt3">{goal.subtasks.map(s=>(<div key={s.id} className="subtask-row"><button onClick={()=>toggleSubtask(goal.id,s.id)} className={"subtask-check"+(s.done?" done":"")}>{s.done && <ICheck size={11}/>}</button><span className="grow" style={{textDecoration:s.done?'line-through':'none', color:s.done?'var(--ink-muted)':'var(--ink)'}}>{s.title}</span><button className="btn-icon btn-danger" onClick={()=>deleteSubtask(goal.id,s.id)}><IX size={13}/></button></div>))}</div>
+      <div className="row mt2"><input className="input grow" placeholder="+ زیرهدف جدید" value={subTitle} onChange={e=>setSubTitle(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter' && subTitle.trim()){ addSubtask(goal.id,subTitle.trim()); setSubTitle(''); } }}/><button className="btn btn-outline" onClick={()=>{ if(subTitle.trim()){ addSubtask(goal.id,subTitle.trim()); setSubTitle(''); } }}><IPlus size={13}/></button></div>
+    </div>
+  );
+}
+
+/* ================= Habits ================= */
+function HabitsTab({habits,addHabit,toggleHabitDay,deleteHabit}){
+  const [name,setName]=useState('');
+  const last7=Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(6-i)); return d; });
+  return (
+    <div>
+      <div className="card row mb5"><input className="input-plain grow" placeholder="مثلاً: تمرین ایتالیایی" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'&&name.trim()){ addHabit(name.trim()); setName(''); } }}/><button className="btn btn-primary" onClick={()=>{ if(name.trim()){ addHabit(name.trim()); setName(''); } }}><IPlus size={14}/>افزودن</button></div>
+      {habits.length===0 && <div className="empty">هنوز عادتی اضافه نکردی.</div>}
+      <div className="col">{habits.map(h=>{ let streak=0; for(let i=last7.length-1;i>=0;i--){ if(h.log[dateKey(last7[i])]) streak++; else break; }
+        return (<div key={h.id} className="card"><div className="between mb2"><div style={{fontWeight:600,fontSize:'.88rem'}}>{h.name}</div><div className="row">{streak>0 && <span style={{fontSize:'.72rem',color:'#F5A623',fontWeight:600}}>{streak} روز پیاپی 🔥</span>}<button className="btn-icon btn-danger" onClick={()=>deleteHabit(h.id)}><ITrash size={14}/></button></div></div><div className="row">{last7.map(d=>{ const key=dateKey(d); const done=!!h.log[key]; return <button key={key} onClick={()=>toggleHabitDay(h.id,key)} className={"habit-day-btn"+(done?" done":"")}>{d.toLocaleDateString('fa-IR',{weekday:'narrow'})}</button>; })}</div></div>);
+      })}</div>
+    </div>
+  );
+}
+
+/* ================= Categories ================= */
+function CategoriesTab({categories,tasks,addCategory,updateCategory,deleteCategory}){
+  const [name,setName]=useState(''); const [color,setColor]=useState('#3E6B99');
+  const weekStart=getWeekStart(new Date()); const weekEnd=new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
+  return (
+    <div>
+      <div className="col mb4">{categories.map(c=>{ const catTasks=tasks.filter(t=>t.categoryId===c.id); const totalMin=catTasks.reduce((s,t)=>s+minutesBetween(t.startTime,t.endTime),0); const weekMin=catTasks.filter(t=>{ const d=keyToDate(t.date); return d>=weekStart && d<=weekEnd; }).reduce((s,t)=>s+minutesBetween(t.startTime,t.endTime),0);
+        return (<div key={c.id} className="card"><div className="row"><label className="color-swatch" style={{background:c.color}}><input type="color" value={c.color} onChange={e=>updateCategory(c.id,{color:e.target.value})}/></label><input className="input-plain grow" style={{fontWeight:600}} value={c.name} onChange={e=>updateCategory(c.id,{name:e.target.value})}/><button className="btn-icon btn-danger" onClick={()=>deleteCategory(c.id)}><ITrash size={15}/></button></div><div className="row-wrap mt2" style={{fontSize:'.75rem'}}><span className="muted">{catTasks.length} کار</span><span className="muted">این هفته: {fmtHours(weekMin)}</span><span className="muted">کل: {fmtHours(totalMin)}</span></div></div>);
+      })}</div>
+      <div className="card"><div style={{fontWeight:700,fontSize:'.85rem',marginBottom:8}}>حوزه‌ی جدید</div><div className="row-wrap"><label className="color-swatch" style={{background:color}}><input type="color" value={color} onChange={e=>setColor(e.target.value)}/></label><input className="input grow" placeholder="اسم حوزه" value={name} onChange={e=>setName(e.target.value)}/><button className="btn btn-primary" onClick={()=>{ if(name.trim()){ addCategory({name:name.trim(),color}); setName(''); } }}><IPlus size={14}/>افزودن</button></div></div>
+    </div>
+  );
+}
+
+/* ================= custom Lists ================= */
+function ListTab({list,updateList,deleteList,addItem,toggleItem,updateItemPriority,deleteItem}){
+  const [title,setTitle]=useState('');
+  return (
+    <div>
+      <div className="between mb3"><div className="row grow"><input className="input-plain" style={{width:34, fontSize:18, textAlign:'center'}} value={list.icon} maxLength={2} onChange={e=>updateList(list.id,{icon:e.target.value})}/><input className="input-plain grow" style={{fontWeight:700,fontSize:'1rem'}} value={list.name} onChange={e=>updateList(list.id,{name:e.target.value})}/></div><button className="btn-icon btn-danger" onClick={()=>{ if(confirm('این لیست کامل پاک بشه؟')) deleteList(list.id); }}><ITrash size={16}/></button></div>
+      <div className="card row mb4"><input className="input-plain grow" placeholder="مورد جدید..." value={title} onChange={e=>setTitle(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'&&title.trim()){ addItem(list.id,title.trim()); setTitle(''); } }}/><button className="btn btn-primary" onClick={()=>{ if(title.trim()){ addItem(list.id,title.trim()); setTitle(''); } }}><IPlus size={14}/></button></div>
+      {list.items.length===0 && <div className="empty">این لیست هنوز خالیه.</div>}
+      <div className="col">{list.items.map(it=>(<div key={it.id} className="task-row"><button onClick={()=>toggleItem(list.id,it.id)} className={"task-check"+(it.done?" done":"")}>{it.done && <ICheck size={13}/>}</button><span className={"task-title grow"+(it.done?" done":"")}>{it.title}</span><FlagPicker value={it.priority} onChange={p=>updateItemPriority(list.id,it.id,p)} size={15}/><button className="btn-icon btn-danger" onClick={()=>deleteItem(list.id,it.id)}><IX size={14}/></button></div>))}</div>
+    </div>
+  );
+}
+
+/* ================= Finance ================= */
+function FinanceTab({fin,calendarType,addAccount,updateAccount,deleteAccount,addFinCategory,deleteFinCategory,addTransaction,deleteTransaction,addDebt,addDebtPayment,deleteDebt,setBudget}){
+  const [view,setView]=useState('summary');
+  const {first,last}=monthGrid(new Date(), calendarType);
+  const monthTx = fin.transactions.filter(t=>{ const d=keyToDate(t.date); return d>=first && d<=last; });
+  const monthIncome = monthTx.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount),0);
+  const monthExpense = monthTx.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount),0);
+  function accBalance(acc){ return acc.initialBalance + fin.transactions.filter(t=>t.accountId===acc.id).reduce((s,t)=> s+(t.type==='income'?Number(t.amount):-Number(t.amount)),0); }
+  const totalBalance = fin.accounts.reduce((s,a)=>s+accBalance(a),0);
+
+  return (
+    <div>
+      <div className="row-wrap mb4">
+        {[['summary','خلاصه'],['transactions','تراکنش‌ها'],['accounts','حساب‌ها'],['debts','بدهی/طلب'],['budgets','بودجه']].map(([k,l])=>(
+          <button key={k} className={"pill"+(view===k?" active":"")} onClick={()=>setView(k)}>{l}</button>
+        ))}
+      </div>
+      {view==='summary' && (
+        <div className="col">
+          <div className="fin-summary-grid">
+            <div className="fin-summary-card"><div className="muted" style={{fontSize:'.75rem'}}>موجودی کل</div><div className="fin-summary-num">{fmtMoney(totalBalance)}</div></div>
+            <div className="fin-summary-card"><div className="muted" style={{fontSize:'.75rem'}}>مانده‌ی این ماه</div><div className="fin-summary-num">{fmtMoney(monthIncome-monthExpense)}</div></div>
+            <div className="fin-summary-card"><div className="muted" style={{fontSize:'.75rem'}}>درآمد این ماه</div><div className="fin-summary-num money-in">{fmtMoney(monthIncome)}</div></div>
+            <div className="fin-summary-card"><div className="muted" style={{fontSize:'.75rem'}}>خرج این ماه</div><div className="fin-summary-num money-out">{fmtMoney(monthExpense)}</div></div>
+          </div>
+          <div className="mt3" style={{fontWeight:700,fontSize:'.88rem'}}>حساب‌ها</div>
+          <div className="col">{fin.accounts.map(a=>(<div key={a.id} className="bar-single between"><span>{a.name}</span><span style={{fontWeight:700}}>{fmtMoney(accBalance(a))}</span></div>))}</div>
+          {fin.categories.filter(c=>c.kind==='expense').some(c=>monthTx.some(t=>t.categoryId===c.id)) && (
+            <div className="mt3">
+              <div style={{fontWeight:700,fontSize:'.88rem',marginBottom:8}}>خرج این ماه به تفکیک دسته</div>
+              <div className="col">{fin.categories.filter(c=>c.kind==='expense').map(c=>{ const sum=monthTx.filter(t=>t.type==='expense'&&t.categoryId===c.id).reduce((s,t)=>s+Number(t.amount),0); if(!sum) return null; const pct=monthExpense? Math.round(sum/monthExpense*100):0;
+                return (<div key={c.id} className="bar-single"><div className="between" style={{fontSize:'.82rem'}}><span className="row"><span className="cat-dot" style={{background:c.color}}/>{c.name}</span><span className="muted">{fmtMoney(sum)} ({pct}%)</span></div><div className="progress-outer mt2"><div className="progress-inner" style={{width:pct+'%', background:c.color}}/></div></div>);
+              })}</div>
+            </div>
+          )}
+        </div>
+      )}
+      {view==='transactions' && <TransactionsSection fin={fin} addTransaction={addTransaction} deleteTransaction={deleteTransaction} addFinCategory={addFinCategory} calendarType={calendarType}/>}
+      {view==='accounts' && <AccountsSection fin={fin} addAccount={addAccount} updateAccount={updateAccount} deleteAccount={deleteAccount} accBalance={accBalance}/>}
+      {view==='debts' && <DebtsSection fin={fin} addDebt={addDebt} addDebtPayment={addDebtPayment} deleteDebt={deleteDebt} calendarType={calendarType}/>}
+      {view==='budgets' && <BudgetsSection fin={fin} monthTx={monthTx} setBudget={setBudget}/>}
+    </div>
+  );
+}
+function TransactionsSection({fin,addTransaction,deleteTransaction,addFinCategory,calendarType}){
+  const [type,setType]=useState('expense');
+  const [amount,setAmount]=useState(''); const [categoryId,setCategoryId]=useState('');
+  const [accountId,setAccountId]=useState(fin.accounts[0]?.id||'');
+  const [date,setDate]=useState(dateKey(new Date())); const [note,setNote]=useState('');
+  const [filter,setFilter]=useState('all');
+  const cats=fin.categories.filter(c=>c.kind===type);
+  function submit(){ if(!amount||Number(amount)<=0) return; addTransaction({type, amount:Number(amount), categoryId: categoryId||cats[0]?.id||'', accountId: accountId||fin.accounts[0]?.id, date, note}); setAmount(''); setNote(''); }
+  const list=[...fin.transactions].sort((a,b)=>b.date.localeCompare(a.date)).filter(t=>filter==='all'||t.type===filter);
+  return (
+    <div>
+      <div className="card mb4">
+        <div className="toggle2 mb3"><button className={"income"+(type==='income'?" active":"")} onClick={()=>setType('income')}>درآمد</button><button className={"expense"+(type==='expense'?" active":"")} onClick={()=>setType('expense')}>خرج</button></div>
+        <div className="row-wrap mb2"><input className="input grow" type="number" placeholder="مبلغ (تومان)" value={amount} onChange={e=>setAmount(e.target.value)}/><input type="date" className="input" value={date} onChange={e=>setDate(e.target.value)}/></div>
+        <div className="row-wrap mb2">
+          <select className="input grow" value={categoryId||cats[0]?.id||''} onChange={e=>setCategoryId(e.target.value)}>{cats.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
+          <select className="input grow" value={accountId} onChange={e=>setAccountId(e.target.value)}>{fin.accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select>
+        </div>
+        <input className="input mb2" style={{width:'100%'}} placeholder="یادداشت (اختیاری)" value={note} onChange={e=>setNote(e.target.value)}/>
+        <button className="btn btn-primary" onClick={submit}><IPlus size={14}/>ثبت تراکنش</button>
+      </div>
+      <div className="row-wrap mb3">{[['all','همه'],['income','درآمد'],['expense','خرج']].map(([k,l])=>(<button key={k} className={"pill"+(filter===k?" active":"")} onClick={()=>setFilter(k)}>{l}</button>))}</div>
+      {list.length===0 && <div className="empty">هنوز تراکنشی ثبت نشده.</div>}
+      <div className="col">{list.map(t=>{ const cat=fin.categories.find(c=>c.id===t.categoryId); const acc=fin.accounts.find(a=>a.id===t.accountId);
+        return (<div key={t.id} className="txn-row"><span className="cat-dot" style={{background:cat?.color||'#999'}}/><div className="grow"><div style={{fontSize:'.86rem',fontWeight:600}}>{cat?.name||'—'}{t.note?` · ${t.note}`:''}</div><div className="muted" style={{fontSize:'.72rem'}}>{fmtDate(keyToDate(t.date),{day:'numeric',month:'short'},calendarType)} · {acc?.name}</div></div><span className={t.type==='income'?'money-in':'money-out'} style={{fontWeight:700, fontSize:'.86rem'}}>{t.type==='income'?'+':'-'}{fmtMoney(t.amount)}</span><button className="btn-icon btn-danger" onClick={()=>deleteTransaction(t.id)}><ITrash size={14}/></button></div>);
+      })}</div>
+    </div>
+  );
+}
+function AccountsSection({fin,addAccount,updateAccount,deleteAccount,accBalance}){
+  const [name,setName]=useState(''); const [initial,setInitial]=useState('');
+  return (
+    <div>
+      <div className="col mb4">{fin.accounts.map(a=>(<div key={a.id} className="card"><div className="row"><input className="input-plain grow" style={{fontWeight:600}} value={a.name} onChange={e=>updateAccount(a.id,{name:e.target.value})}/><button className="btn-icon btn-danger" onClick={()=>deleteAccount(a.id)}><ITrash size={15}/></button></div><div className="row-wrap mt2"><span className="muted" style={{fontSize:'.78rem'}}>موجودی اولیه:</span><input className="input" type="number" value={a.initialBalance} onChange={e=>updateAccount(a.id,{initialBalance:Number(e.target.value)||0})} style={{width:120}}/><span className="muted" style={{marginRight:'auto',fontSize:'.82rem'}}>موجودی الان: <b>{fmtMoney(accBalance(a))}</b></span></div></div>))}</div>
+      <div className="card"><div style={{fontWeight:700,fontSize:'.85rem',marginBottom:8}}>حساب جدید</div><div className="row-wrap"><input className="input grow" placeholder="اسم حساب" value={name} onChange={e=>setName(e.target.value)}/><input className="input" type="number" placeholder="موجودی اولیه" value={initial} onChange={e=>setInitial(e.target.value)} style={{width:130}}/><button className="btn btn-primary" onClick={()=>{ if(name.trim()){ addAccount(name.trim(), initial); setName(''); setInitial(''); } }}><IPlus size={14}/></button></div></div>
+    </div>
+  );
+}
+function DebtsSection({fin,addDebt,addDebtPayment,deleteDebt,calendarType}){
+  const [person,setPerson]=useState(''); const [type,setType]=useState('owe'); const [amount,setAmount]=useState(''); const [dueDate,setDueDate]=useState(''); const [note,setNote]=useState('');
+  const [payDrafts,setPayDrafts]=useState({});
+  return (
+    <div>
+      <div className="card mb4">
+        <div className="toggle2 mb3"><button className={"expense"+(type==='owe'?" active":"")} onClick={()=>setType('owe')}>بدهی من</button><button className={"income"+(type==='owed'?" active":"")} onClick={()=>setType('owed')}>طلب من</button></div>
+        <div className="row-wrap mb2"><input className="input grow" placeholder="اسم طرف حساب" value={person} onChange={e=>setPerson(e.target.value)}/><input className="input" type="number" placeholder="مبلغ" value={amount} onChange={e=>setAmount(e.target.value)} style={{width:130}}/></div>
+        <div className="row-wrap mb2"><input type="date" className="input" value={dueDate} onChange={e=>setDueDate(e.target.value)}/><input className="input grow" placeholder="یادداشت (اختیاری)" value={note} onChange={e=>setNote(e.target.value)}/></div>
+        <button className="btn btn-primary" onClick={()=>{ if(person.trim()&&amount){ addDebt({person:person.trim(),type,amount:Number(amount),dueDate,note}); setPerson(''); setAmount(''); setDueDate(''); setNote(''); } }}><IPlus size={14}/>ثبت</button>
+      </div>
+      {fin.debts.length===0 && <div className="empty">بدهی یا طلبی ثبت نشده.</div>}
+      <div className="col">{fin.debts.map(d=>{ const pct=Math.round((d.paid/d.amount)*100)||0;
+        return (
+          <div key={d.id} className="card">
+            <div className="between"><div><span style={{fontWeight:700}}>{d.person}</span> <span className="muted" style={{fontSize:'.75rem'}}>({d.type==='owe'?'بدهی من':'طلب من'})</span></div><button className="btn-icon btn-danger" onClick={()=>deleteDebt(d.id)}><ITrash size={14}/></button></div>
+            {d.dueDate && <div className="muted mt2" style={{fontSize:'.72rem'}}>مهلت: {fmtDate(keyToDate(d.dueDate),{day:'numeric',month:'short',year:'numeric'},calendarType)}</div>}
+            <div className="row mt2"><div className="progress-outer grow"><div className="progress-inner" style={{width:pct+'%', background:d.settled?'#00B894':(d.type==='owe'?'var(--danger)':'var(--good)')}}/></div><span className="muted" style={{fontSize:'.75rem'}}>{fmtMoney(d.paid)}/{fmtMoney(d.amount)}</span></div>
+            {!d.settled && (
+              <div className="row-wrap mt2">
+                <input className="input" type="number" placeholder="مبلغ پرداخت" value={payDrafts[d.id]||''} onChange={e=>setPayDrafts({...payDrafts,[d.id]:e.target.value})} style={{width:130}}/>
+                <button className="btn btn-outline" onClick={()=>{ if(payDrafts[d.id]){ addDebtPayment(d.id, payDrafts[d.id]); setPayDrafts({...payDrafts,[d.id]:''}); } }}>ثبت پرداخت</button>
+              </div>
+            )}
+            {d.settled && <div className="mt2" style={{color:'#00B894', fontSize:'.78rem', fontWeight:600}}>تسویه شده ✓</div>}
+          </div>
+        );
+      })}</div>
+    </div>
+  );
+}
+function BudgetsSection({fin,monthTx,setBudget}){
+  const expenseCats=fin.categories.filter(c=>c.kind==='expense');
+  return (
+    <div className="col">
+      {expenseCats.length===0 && <div className="empty">دسته‌ی خرجی وجود نداره.</div>}
+      {expenseCats.map(c=>{ const spent=monthTx.filter(t=>t.type==='expense'&&t.categoryId===c.id).reduce((s,t)=>s+Number(t.amount),0); const limit=fin.budgets[c.id]||0; const pct=limit? Math.min(100,Math.round(spent/limit*100)) : 0;
+        return (
+          <div key={c.id} className="card">
+            <div className="row"><span className="cat-dot" style={{background:c.color}}/><span className="grow" style={{fontWeight:600,fontSize:'.86rem'}}>{c.name}</span><input className="input" type="number" placeholder="سقف ماهانه" value={fin.budgets[c.id]||''} onChange={e=>setBudget(c.id,e.target.value)} style={{width:130}}/></div>
+            {limit>0 && (<><div className="progress-outer mt2"><div className="progress-inner" style={{width:pct+'%', background: spent>limit?'var(--danger)':c.color}}/></div><div className="muted mt2" style={{fontSize:'.75rem'}}>{fmtMoney(spent)} از {fmtMoney(limit)} {spent>limit && <span style={{color:'var(--danger)'}}> — بیشتر از سقف!</span>}</div></>)}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ================= Stats ================= */
+function StatsTab({tasks,habits,goals,categories}){
+  const weekStart=getWeekStart(new Date());
+  const weekDays=Array.from({length:7},(_,i)=>{ const d=new Date(weekStart); d.setDate(weekStart.getDate()+i); return d; });
+  const chart=weekDays.map((d,i)=>{ const key=dateKey(d); const items=tasks.filter(t=>t.date===key); return {label:WEEKDAY_HEAD_FA[i], total:items.length, done:items.filter(t=>t.done).length}; });
+  const maxTotal=Math.max(1,...chart.map(c=>c.total));
+  const last7=Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(6-i)); return d; });
+  return (
+    <div className="col" style={{gap:24}}>
+      <div><div style={{fontWeight:700,fontSize:'.92rem',marginBottom:8}}>کارهای این هفته</div><div className="card"><div className="bar-chart">{chart.map(c=>(<div key={c.label} className="bar-chart-col"><div className="bar-chart-track" style={{height:`${(c.total/maxTotal)*100}%`}}><div className="bar-chart-fill" style={{height: c.total? `${(c.done/c.total)*100}%` : '0%'}}/></div><div className="bar-chart-label">{c.label}</div></div>))}</div></div></div>
+      {categories.length>0 && (<div><div style={{fontWeight:700,fontSize:'.92rem',marginBottom:8}}>ساعت‌های این هفته به تفکیک حوزه</div><div className="col">{categories.map(c=>{ const min=tasks.filter(t=>t.categoryId===c.id && keyToDate(t.date)>=weekStart).reduce((s,t)=>s+minutesBetween(t.startTime,t.endTime),0); const max=Math.max(60,...categories.map(cc=>tasks.filter(t=>t.categoryId===cc.id && keyToDate(t.date)>=weekStart).reduce((s,t)=>s+minutesBetween(t.startTime,t.endTime),0))); return (<div key={c.id} className="bar-single"><div className="between" style={{fontSize:'.82rem'}}><span>{c.name}</span><span className="muted">{fmtHours(min)}</span></div><div className="progress-outer mt2"><div className="progress-inner" style={{width:`${(min/max)*100}%`, background:c.color}}/></div></div>); })}</div></div>)}
+      {habits.length>0 && (<div><div style={{fontWeight:700,fontSize:'.92rem',marginBottom:8}}>ثبات عادت‌ها (۷ روز اخیر)</div><div className="col">{habits.map(h=>{ const doneDays=last7.filter(d=>h.log[dateKey(d)]).length; const pct=Math.round((doneDays/7)*100); return (<div key={h.id} className="bar-single"><div className="between" style={{fontSize:'.82rem'}}><span>{h.name}</span><span className="muted">{pct}%</span></div><div className="progress-outer mt2"><div className="progress-inner" style={{width:pct+'%', background:'#2FB8A6'}}/></div></div>); })}</div></div>)}
+      {goals.length>0 && (<div><div style={{fontWeight:700,fontSize:'.92rem',marginBottom:8}}>پیشرفت اهداف</div><div className="col">{goals.map(g=>{ const total=g.subtasks.length, done=g.subtasks.filter(s=>s.done).length; const pct=total?Math.round((done/total)*100):0; return (<div key={g.id} className="bar-single"><div className="between" style={{fontSize:'.82rem'}}><span>{g.title}</span><span className="muted">{pct}%</span></div><div className="progress-outer mt2"><div className="progress-inner" style={{width:pct+'%', background:'#F5A623'}}/></div></div>); })}</div></div>)}
+    </div>
+  );
+}
+
+/* ================= Settings ================= */
+function SettingsTab({calendarType,setCalendarType,tabOrder,hiddenTabs,moveBuiltinTab,toggleBuiltinTabHidden,lists,deleteList,signOut,email}){
+  return (
+    <div className="col" style={{gap:20}}>
+      <div className="card between"><div><div style={{fontWeight:700,fontSize:'.85rem'}}>وارد شده با</div><div className="muted" style={{fontSize:'.8rem'}}>{email}</div></div><button className="btn btn-outline" onClick={signOut}><ILogout size={14}/>خروج</button></div>
+      <div className="card"><div style={{fontWeight:700,fontSize:'.9rem',marginBottom:10}}>نوع تقویم</div><div className="row-wrap"><button className={"btn "+(calendarType==='jalali'?'btn-primary':'btn-outline')} onClick={()=>setCalendarType('jalali')}>شمسی</button><button className={"btn "+(calendarType==='gregorian'?'btn-primary':'btn-outline')} onClick={()=>setCalendarType('gregorian')}>میلادی</button></div></div>
+      <div className="card">
+        <div style={{fontWeight:700,fontSize:'.9rem',marginBottom:4}}>تب‌های اصلی</div>
+        <div className="muted mb3" style={{fontSize:'.76rem'}}>ترتیب یا نمایش‌شون رو تغییر بده.</div>
+        <div className="col" style={{gap:6}}>{tabOrder.map((id,idx)=>{ const Ic=TAB_ICONS[id]; const hidden=hiddenTabs.includes(id);
+          return (<div key={id} className="settings-tab-row"><Ic size={15}/><span className="grow">{TAB_LABELS[id]}</span><button className="btn-icon" onClick={()=>moveBuiltinTab(id,-1)} disabled={idx===0}><IChevronUp size={14}/></button><button className="btn-icon" onClick={()=>moveBuiltinTab(id,1)} disabled={idx===tabOrder.length-1}><IChevronDown size={14}/></button><button className={"vis-toggle "+(hidden?"off":"on")} onClick={()=>toggleBuiltinTabHidden(id)}>{hidden?'مخفی':'نمایش'}</button></div>);
+        })}</div>
+      </div>
+      <div className="card">
+        <div style={{fontWeight:700,fontSize:'.9rem',marginBottom:4}}>لیست‌های من</div>
+        <div className="col" style={{gap:6}}>{lists.length===0 && <div className="muted" style={{fontSize:'.8rem'}}>هنوز لیستی نساختی — از دکمه‌ی «لیست» بالای صفحه بساز.</div>}{lists.map(l=>(<div key={l.id} className="settings-tab-row"><span>{l.icon}</span><span className="grow">{l.name}</span><button className="btn-icon btn-danger" onClick={()=>{ if(confirm('پاک بشه؟')) deleteList(l.id); }}><ITrash size={14}/></button></div>))}</div>
+      </div>
+      <div className="sticky-note">همه‌چیز خودکار روی ابر (Firebase) ذخیره می‌شه — کافیه با همین ایمیل و رمز از هر گوشی یا کامپیوتری وارد بشی.</div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+</script>
+</body>
+</html>
